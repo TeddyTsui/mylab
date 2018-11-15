@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8"/>
+		<title>
+			Document
+		</title>
+	</head>
+	<body>
+		<script src="pixi.min.js"></script>
+		<script>
+				/*let type = 'WebGL'
+				if(!PIXI.utils.isWebGLSupported()){
+					type = 'canvas'
+				}
+		
+				PIXI.utils.sayHello(type)*/
+		
+				let Application = PIXI.Application,
+				    Container = PIXI.Container,
+				    loader = PIXI.loader,
+				    resources = PIXI.loader.resources,
+				    TextureCache = PIXI.utils.TextureCache,
+				    Sprite = PIXI.Sprite,
+				    Rectangle = PIXI.Rectangle,
+				    AnimatedSprite = PIXI.extras.AnimatedSprite
+								
+				let app = new Application({width: 256, height: 256})
+		
+				document.body.appendChild(app.view)
+				
+				let left = keyboard(37),
+				    up = keyboard(38),
+				    right = keyboard(39),
+				    down = keyboard(40)
+		
+				loader.add('adventurer','sheet/adventurer/adventurer.json')
+					.load(setup)
+		
+				function setup() {
+					let adventurerSheet = loader.resources.adventurer.spritesheet
+					let adventurer = new Container()
+					
+					adventurer.motion = {
+						right: {},
+						left: {}
+					}
+		
+					adventurer.motion.right.idle = new AnimatedSprite(adventurerSheet.animations['right_idle'])
+					adventurer.motion.right.idle.animationSpeed = .2
+					adventurer.motion.left.idle = new AnimatedSprite(adventurerSheet.animations['left_idle'])
+					adventurer.motion.left.idle.animationSpeed = .2
+		
+					adventurer.motion.right.run = new AnimatedSprite(adventurerSheet.animations['right_run'])
+					adventurer.motion.left.run = new AnimatedSprite(adventurerSheet.animations['left_run'])
+		
+		
+		
+					adventurer.curDirect = 'right'
+					adventurer.curMotion = 'idle'
+					adventurer.nextDirect = 'right'
+					adventurer.nextMotion = 'idle'
+					adventurer.vx = 0
+					adventurer.vy = 0
+					adventurer.name = 'helloworld'
+		
+					for(direct in adventurer.motion){
+						for(motion in adventurer.motion[direct]){
+							if(direct != adventurer.curDirect || motion != adventurer.curMotion){
+								adventurer.motion[direct][motion].alpha = 0
+							}
+							adventurer.motion[direct][motion].onFrameChange = function(){detectMotion(this,adventurer)}
+							
+							adventurer.addChild(adventurer.motion[direct][motion])
+						}
+					}
+		
+					app.stage.addChild(adventurer)
+		
+					bindKey(adventurer, left, right, up, down)
+					
+					adventurer.motion[adventurer.curDirect][adventurer.curMotion].play()
+		
+					//Set the game state
+					state = play
+		
+					//Start the game loop
+					app.ticker.add(delta => gameLoop(delta, adventurer))
+				}
+		
+				function gameLoop(delta, sprite){
+		
+				  //Update the current game state:
+				  state(delta, sprite);
+				}
+		
+				function play(delta, sprite) {
+				  //Move the cat 1 pixel to the right each frame
+				  sprite.x += sprite.vx
+				  sprite.y += sprite.vy
+				}
+		
+				function detectMotion(self, sprite) {
+					if((sprite.nextMotion !== sprite.curMotion) || (sprite.nextDirect != sprite.curDirect)){
+						self.alpha = 0
+						self.stop()
+		
+						sprite.motion[sprite.nextDirect][sprite.nextMotion].alpha = 1
+						sprite.motion[sprite.nextDirect][sprite.nextMotion].gotoAndPlay(0)
+		
+						sprite.curDirect = sprite.nextDirect
+						sprite.curMotion = sprite.nextMotion
+					}
+				}
+		
+				function bindKey(sprite, left, right, up, down){
+					left.press = () => {
+						console.log('left press')
+						sprite.nextDirect = 'left'
+						sprite.vx = -1
+						sprite.nextMotion = 'run'
+						console.log('nm: ' + sprite.nextMotion, ' nd: ' + sprite.nextDirect)
+						console.log('cm: ' + sprite.curMotion, ' cd: ' + sprite.curDirect)
+					}
+					left.release = () => {
+						console.log('left release')
+						if (!right.isDown) {
+					    	sprite.vx = 0
+					    	sprite.nextMotion = 'idle'
+					    }
+					}
+		
+					right.press = () => {
+						console.log('right press')
+						sprite.nextDirect = 'right'
+						sprite.vx = 1
+						sprite.nextMotion = 'run'
+					}
+					right.release = () => {
+						console.log('right release')
+						if (!left.isDown) {
+					    	sprite.vx = 0
+					    	sprite.nextMotion = 'idle'
+					    }
+					}
+		
+					up.press = () => {
+						console.log('up press')
+						sprite.vy = -1
+						sprite.nextMotion = 'run'
+					}
+					up.release = () => {
+						console.log('up release')
+						if(!down.isDown){
+							sprite.vy = 0
+							sprite.nextMotion = 'idle'
+						}
+					}
+		
+					down.press = () => {
+						console.log('down press')
+						sprite.vy = 1
+						sprite.nextMotion = 'run'
+					}
+					down.release = () => {
+						console.log('down release')
+						if(!up.isDown){
+							sprite.vy = 0
+							sprite.nextMotion = 'idle'
+						}
+					}
+				}
+		
+				function keyboard(keyCode) {
+					let key = {}
+					key.code = keyCode
+					key.isUp = true
+					key.isDown = false
+					key.press = undefined
+					key.release = undefined
+		
+					key.downHandler = event => {
+						if(event.keyCode === keyCode){
+							if (key.isUp && key.press) key.press();
+							key.isDown = true
+							key.isUp = false
+						}
+		
+						event.preventDefault()
+					}
+		
+					key.upHandler = event => {
+					    if (event.keyCode === key.code) {
+						    if (key.isDown && key.release) key.release();
+						    key.isDown = false
+						    key.isUp = true
+					    }
+					    event.preventDefault()
+					}
+		
+					//Attach event listeners
+					window.addEventListener(
+						"keydown", key.downHandler.bind(key), false
+					)
+		
+					window.addEventListener(
+						"keyup", key.upHandler.bind(key), false
+					)
+		
+					return key;
+				}
+			</script>
+	</body>
+</html>
