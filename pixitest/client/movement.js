@@ -1,4 +1,6 @@
-let sprite,keys
+let preStatus, 
+    nextStatus = {},
+    keys
 
 // preFrame = { //each logic frame & each player
 //     'player_id':{
@@ -13,6 +15,7 @@ let sprite,keys
 //         vz: 0,
 //         ax: 0,
 //         ay: 0,
+//         az: .6,
 
 //         // action
 //         lastX: 'right',
@@ -37,7 +40,7 @@ let sprite,keys
 //     }
 // }
 
-function doSimpleLogic(preLogicFrame, operations) {
+export function doSimpleLogic(preLogicFrame, operations) {
     let nextLogicFrame = {}
     Object.keys(preLogicFrame).forEach(id => {
         movement(preLogicFrame[id], operations[id])
@@ -46,100 +49,96 @@ function doSimpleLogic(preLogicFrame, operations) {
 }
 
 function movement(player, operation){
-    sprite = player
+    preStatus = player
     keys = operation
-    return calculatePosition()   
+    calculateSpeed()
+    calculateAnimation()
+    nextLogicFrame[player.id] = nextStatus
 }
 
 function calculateSpeed() {
-    let ax = 0;
-    let ay = 0;
     let acc = 1;
-    let speedDown = 0.7;
-    if (keys.up) ay -= 1;
-    if (keys.down) ay += 1;
-    if (keys.left) ax -= 1;
-    if (keys.right) ax += 1;
-    let v = normalize([ax, ay]);
-    sprite.vx += v[0] * acc;
-    sprite.vy += v[1] * acc;
-    if (keys.dash && sprite.dashCounter == 0) {
-        sprite.dashCounter = sprite.abilities.dashCoolDown;
-        sprite.vx *= 6;
-        sprite.vy *= 6;
+    if (keys.up) nextStatus.ay = preStatus.ay - 1;
+    if (keys.down) nextStatus.ay = preStatus.ay + 1;
+    if (keys.left) nextStatus.ax = preStatus.ax - 1;
+    if (keys.right) nextStatus.ax = preStatus.ax + 1;
+    let v = normalize([nextStatus.ax, nextStatus.ay]);
+    nextStatus.vx = preStatus.vx + v[0] * acc;
+    nextStatus.vy = preStatus.vy + v[1] * acc;
+    if (keys.dash && preStatus.dashCounter == 0) {
+        nextStatus.dashCounter = preStatus.dashCoolDown;
+        nextStatus.vx *= 6;
+        nextStatus.vy *= 6;
     }
-    sprite.vx *= speedDown;
-    sprite.vy *= speedDown;
+    nextStatus.vx *= preStatus.speedDown;
+    nextStatus.vy *= preStatus.speedDown;
+
+    nextStatus.x = preStatus.x + nextStatus.vx
+    nextStatus.y = preStatus.y + nextStatus.vy
 }
 
 function calculateAnimation() {
-    if (sprite.attackCounter > 0) sprite.attackCounter--;
-    if (sprite.dashCounter > 0) sprite.dashCounter--;
-    if (sprite.actionCounter > 0) {
-        sprite.actionCounter--;
-        sprite.vx *= 0.6;
-        sprite.vy *= 0.6;
+    if (preStatus.attackCounter > 0) nextStatus.attackCounter--;
+    if (preStatus.dashCounter > 0) nextStatus.dashCounter--;
+    if (preStatus.actionCounter > 0) {
+        nextStatus.actionCounter--;
+        nextStatus.vx *= 0.6;
+        nextStatus.vy *= 0.6;
         return;
     }
-    if (!sprite.jumping) { // not jumping
-        if (Math.abs(sprite.vx) < 0.1 && Math.abs(sprite.vy) < 0.1) sprite.action = 'idle'
+    if (!preStatus.jumping) { // not jumping
+        
+        nextStatus.jumping = preStatus.jumping
+        nextStatus.z = 0
+
+        if (Math.abs(nextStatus.vx) < 0.1 && Math.abs(nextStatus.vy) < 0.1) nextStatus.action = 'idle'
         else{
-            if (sprite.vx > 0) {
-                sprite.action = 'run'
-                sprite.lastX = 'right';
-            } else if (sprite.vx < 0) {
-                sprite.action = 'run'
-                sprite.lastX = 'left'
+            if (nextStatus.vx > 0) {
+                nextStatus.action = 'run'
+                nextStatus.lastX = 'right';
+            } else if (nextStatus.vx < 0) {
+                nextStatus.action = 'run'
+                nextStatus.lastX = 'left'
             } else {
-                sprite.action = 'run'
+                nextStatus.action = 'run'
             }
-            if (sprite.vy > 0) sprite.lastY = 'down';
-            else if (sprite.vy < 0) sprite.lastY = 'up';
+            if (nextStatus.vy > 0) nextStatus.lastY = 'down';
+            else if (nextStatus.vy < 0) nextStatus.lastY = 'up';
         }
         if (keys.attack) {
-            if (sprite.attackCounter > 0) return;
-            sprite.actionCounter = sprite.abilities.actionCoolDown;
-            sprite.attackCounter = sprite.abilities.attackCoolDown;
-            sprite.action = 'attack';
+            if (preStatus.attackCounter > 0) return;
+            nextStatus.actionCounter = preStatus.actionCoolDown;
+            nextStatus.attackCounter = preStatus.attackCoolDown;
+            nextStatus.action = 'attack';
         }
         if (keys.jump) {
-            sprite.jumping = true;
-            sprite.entity.vy = -5;
+            nextStatus.jumping = true;
+            nextStatus.z = -5;
         }
-
-        return 0
     } else { // jumping
-        if (sprite.vx > 0) sprite.lastX = 'right';
-        else if (sprite.vx < 0) sprite.lastX = 'left';
+        if (nextStatus.vx > 0) nextStatus.lastX = 'right';
+        else if (nextStatus.vx < 0) nextStatus.lastX = 'left';
 
         if (keys.attack) {
-            if (sprite.attackCounter <= 0) {
-                sprite.actionCounter = sprite.abilities.actionCoolDown;
-                sprite.attackCounter = sprite.abilities.attackCoolDown;
-                sprite.action = 'jump_attack'
+            if (preStatus.attackCounter <= 0) {
+                nextStatus.actionCounter = preStatus.actionCoolDown;
+                nextStatus.attackCounter = preStatus.attackCoolDown;
+                nextStatus.action = 'jump_attack'
             }
-        }else sprite.action = 'jump'
+        }else nextStatus.action = 'jump'
 
         // jump down
-        let az = 0.3, z
-        sprite.entity.vy += az;
-        z = sprite.entity.y + sprite.entity.vy;
-        if (z > 0) {
-            z = 0;
-            sprite.jumping = false;
+        nextStatus.z += nextStatus.az
+        if (nextStatus.z > 0) {
+            nextStatus.z = 0;
+            nextStatus.jumping = false;
         }
-        return z
     }
 }
 
 function calculatePosition() {
     calculateSpeed()
-    let z = calculateAnimation()
-    return {
-        x: sprite.x + sprite.vx,
-        y: sprite.y + sprite.vy,
-        z: z
-    }
+    calculateAnimation()
 }
 
 function normalize(arr) {

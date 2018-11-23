@@ -22,12 +22,6 @@ export function createSprite(name, charactor, status) {
 
     player.entity = entity
     player.status = selfCircle
-    player.lastX = 'right'
-    player.vx = 0;
-    player.vy = 0;
-    player.actionCounter = 0
-    player.dashCounter = 0 
-    player.attackCounter = 0
 
     return player
 }

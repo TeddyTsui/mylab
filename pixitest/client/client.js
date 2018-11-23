@@ -48,12 +48,12 @@ let app = undefined,
 
 let gameFrame,
     nextGameFrame,
-    maxFrameCache = 60*60*60,
+    maxFrameCache = 60 * 60 * 60,
     fpsRadio = 2,
     updateCache = [],
     logicFrameCahce = []
 
-export function initClient(element) {  
+export function initClient(element) {
 
     let width = element.offsetWidth,
         height = element.offsetHeight
@@ -71,7 +71,7 @@ export function initClient(element) {
             .load(setup)
     }
 
-    function setup(){
+    function setup() {
         // set up charactor ability
         resources.adventurer.baseAbilities = {
             actionCoolDown: 20,
@@ -87,10 +87,47 @@ export function initClient(element) {
 
         // for test
         createPlayer('TEST', 'adventurer')
-        let network = setInterval(communicate,1000/60*fpsRadio)
-    }
+        let network = setInterval(communicate, 1000 / 60 * fpsRadio)
 
-    
+        logicFrameCahce.push(
+            {
+                'Nijia_001': {
+                    // position
+                    x: 0,
+                    y: 0,
+                    z: 0,
+
+                    // speed
+                    vx: 0,
+                    vy: 0,
+                    vz: 0,
+                    ax: 0,
+                    ay: 0,
+                    az: .6,
+
+                    // action
+                    lastX: 'right',
+                    lastY: 'down',
+                    motion: 'idle',
+                    jumping: false,
+                    actionCounter: 0,
+                    attackCounter: 0,
+                    dashCounter: 0,
+
+                    // ability
+                    speedDown: 2,
+                    actionCoolDown: 10,
+                    attackCoolDown: 20,
+                    dashCoolDown: 10,
+
+                    //status
+                    HP: 100,
+                    maxHP: 100,
+                    MP: 60,
+                    maxMP: 60
+                }
+            })
+    }
 }
 
 function gameLoop(delta) {
@@ -100,56 +137,60 @@ function gameLoop(delta) {
 let counter
 
 function play(delta) {
-    if(gameFrame > maxFrameCache){
-        gameFrame = 0    
-    }else{
+    if (gameFrame > maxFrameCache) {
+        gameFrame = 0
+    } else {
         gameFrame += delta
     }
 
-    let index = Math.floor(delta/ fpsRadio)
-    let offset = delta% fpsRadio
+    let index = Math.floor(delta / fpsRadio)
+    let offset = delta % fpsRadio
 
     //
-    if(gameFrame > nextGameFrame){
-        nextGameFrame += fpsRadio* (index + 1)
-        
-        if(updateCache.length > 0){
+    if (gameFrame > nextGameFrame) {
+        nextGameFrame += fpsRadio * (index + 1)
+
+        if (updateCache.length > 0) {
             // do some Logic
-            doSimpleLogic(logicFrameCahce[logicFrameCahce.length - 1], updateCache.shift())
+            logicFrameCahce.push(
+                doSimpleLogic(logicFrameCahce[logicFrameCahce.length - 1], updateCache.shift())
+            )
         }
     }
 
     // update game frame
-    if(logicFrameCahce.length > 0){
-        if(index > 0 && index > logicFrameCahce.length){
-            if(index > logicFrameCahce.length){
+    if (logicFrameCahce.length > 0) {
+        if (index >= 0 && index >= logicFrameCahce.length) {
+            if (index >= logicFrameCahce.length) {
                 counter = fpsRadio
                 index = logicFrameCahce.length
-            }else{
+                updateGameFrame(logicFrameCahce[index], offset)
+                return
+            } else {
                 counter = offset
             }
-        }else{
+        } else {
             counter += offset
         }
 
         updateGameFrame(logicFrameCahce[index], offset)
 
-        if(counter == fpsRadio){
+        if (counter == fpsRadio) {
             logicFrameCahce.splice(0, index + 1)
-        }else if(index){
+        } else if (index) {
             logicFrameCahce.splice(0, index)
         }
     }
 }
 
 // calculate interpolation rendering
-function updateGameFrame(logicFrame, offset){
+function updateGameFrame(logicFrame, offset) {
     Object.keys(players).forEach(id => {
-        let {x, y, z} = logicFrame[id]
-        players[id].x += (x - players[id].x)/ fpsRadio* offset
-        players[id].y += (y - players[id].y)/ fpsRadio* offset
-        players[id].entity.y += (z - players[id].entity.y)/ fpsRadio* offset
-        playAnim(players[id].entity, players[id].lastX +'_'+ players[id].action, false)
+        let { x, y, z } = logicFrame[id]
+        players[id].x += (x - players[id].x) / fpsRadio * offset
+        players[id].y += (y - players[id].y) / fpsRadio * offset
+        players[id].entity.y += (z - players[id].entity.y) / fpsRadio * offset
+        playAnim(players[id].entity, logicFrame[id].lastX + '_' + logicFrame[id].motion, false)
     })
 }
 
@@ -177,7 +218,7 @@ function createPlayer(name, charactor, conf = controllConfig) {
 // init a charactor
 function initPlayer({ id, name, charactor, status }) {
     window.localStorage.setItem('AdventurerPlayer', id)
-    players[id]  = createSprite(name, charactor, status)
+    players[id] = createSprite(name, charactor, status)
     app.stage.addChild(players[id])
 }
 
@@ -191,9 +232,9 @@ function reconnectPlayer(id) {
 function bindKey(conf) {
     Object.keys(conf).forEach(k => {
         let key = keyboard(conf[k])
-        if(k=='jump'){
-            key.press = () => {keys[k] = true; console.log(players['Nijia_001'].entity.y)}
-        }else{
+        if (k == 'jump') {
+            key.press = () => { keys[k] = true; console.log(players['Nijia_001'].entity.y) }
+        } else {
             key.press = () => keys[k] = true
         }
         key.release = () => keys[k] = false
@@ -207,8 +248,8 @@ function updateControl() {
     // send control to server
 }
 
-function communicate(){
-    if(response){
-        updateCache.push({'Nijia_001': keys})
+function communicate() {
+    if (response) {
+        updateCache.push({ 'Nijia_001': keys })
     }
 }
