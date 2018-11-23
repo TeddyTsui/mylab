@@ -1,5 +1,50 @@
 let sprite,keys
 
+// preFrame = { //each logic frame & each player
+//     'player_id':{
+//         // position
+//         x: 0,
+//         y: 0,
+//         z: 0,
+
+//         // speed
+//         vx: 0,
+//         vy: 0,
+//         vz: 0,
+//         ax: 0,
+//         ay: 0,
+
+//         // action
+//         lastX: 'right',
+//         lastY: 'down',
+//         motion: 'idel',
+//         jumping: false,
+//         actionCounter: 0,
+//         attackCounter: 0,
+//         dashCounter: 0,
+
+//         // ability
+//         speedDown: 2,
+//         actionCoolDown: 10,
+//         attackCoolDown: 20,
+//         dashCoolDown: 10,
+
+//         //status
+//         HP: 100,
+//         maxHP: 100,
+//         MP: 60,
+//         maxMP: 60
+//     }
+// }
+
+function doSimpleLogic(preLogicFrame, operations) {
+    let nextLogicFrame = {}
+    Object.keys(preLogicFrame).forEach(id => {
+        movement(preLogicFrame[id], operations[id])
+    })
+    return nextLogicFrame
+}
+
 function movement(player, operation){
     sprite = player
     keys = operation
@@ -18,8 +63,8 @@ function calculateSpeed() {
     let v = normalize([ax, ay]);
     sprite.vx += v[0] * acc;
     sprite.vy += v[1] * acc;
-    if (keys.dash && dashCounter == 0) {
-        dashCounter = dashCoolDown;
+    if (keys.dash && sprite.dashCounter == 0) {
+        sprite.dashCounter = sprite.abilities.dashCoolDown;
         sprite.vx *= 6;
         sprite.vy *= 6;
     }
@@ -53,8 +98,8 @@ function calculateAnimation() {
         }
         if (keys.attack) {
             if (sprite.attackCounter > 0) return;
-            sprite.actionCounter = sprite.charactor.actionCoolDown;
-            sprite.attackCounter = sprite.charactor.attackCoolDown;
+            sprite.actionCounter = sprite.abilities.actionCoolDown;
+            sprite.attackCounter = sprite.abilities.attackCoolDown;
             sprite.action = 'attack';
         }
         if (keys.jump) {
@@ -69,8 +114,8 @@ function calculateAnimation() {
 
         if (keys.attack) {
             if (sprite.attackCounter <= 0) {
-                sprite.actionCounter = sprite.charactor.actionCoolDown;
-                sprite.attackCounter = sprite.charactor.attackCoolDown;
+                sprite.actionCounter = sprite.abilities.actionCoolDown;
+                sprite.attackCounter = sprite.abilities.attackCoolDown;
                 sprite.action = 'jump_attack'
             }
         }else sprite.action = 'jump'
@@ -79,7 +124,7 @@ function calculateAnimation() {
         let az = 0.3, z
         sprite.entity.vy += az;
         z = sprite.entity.y + sprite.entity.vy;
-        if (sprite.entity.y > 0) {
+        if (z > 0) {
             z = 0;
             sprite.jumping = false;
         }

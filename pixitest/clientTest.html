@@ -9,9 +9,13 @@
 <body>
     <div id="playground"></div>
     <script src="pixi.min.js"></script>
-    <script src="client/client.js" type="module"></script>
+    <script type="module">
+        import { initClient as client } from './client/client.js'
+
+        client(document.getElementById('playground'))
+    </script>
     <style>
-        #id{
+        #playground{
             width: 600px;
             height: 400px;
             margin: 40px auto;

@@ -1,25 +1,40 @@
-import { Container, loader } from './sheetLoader'
+let Container = PIXI.Container,
+    resources = PIXI.loader.resources,
+    Graphics = PIXI.Graphics,
+    AnimatedSprite = PIXI.extras.AnimatedSprite
 
-export function createSprite(name, character, status) {
-    let characterSheet = loader.resources[character].spritesheet
-    let adventurer = new Container()
-        body = new Container()
+export function createSprite(name, charactor, status) {
+    let charactorSheet = resources[charactor].spritesheet
+    let player = new Container(),
+        entity = new Container()
 
-    adventurer.name = name
+    player.name = name
+    player.abilities = resources[charactor].baseAbilities
 
-    selfCircle = new PIXI.Graphics()
+    let selfCircle = new Graphics()
     selfCircle.lineStyle(2, 0x00FF00, 1)
-    selfCircle.drawCircle(adventurer.x + 16, adventurer.y + 60, 10)
+    selfCircle.drawCircle(player.x + 16, player.y + 60, 10)
     selfCircle.scale.y = 0.5
 
-    adventurer.addChild(selfCircle)
-    adventurer.addChild(body)
-    initAnim(body, character, characterSheet)
+    player.addChild(selfCircle)
+    player.addChild(entity)
+    initAnim(entity, charactorSheet)
 
-    return adventurer
+    player.entity = entity
+    player.status = selfCircle
+    player.lastX = 'right'
+    player.vx = 0;
+    player.vy = 0;
+    player.actionCounter = 0
+    player.dashCounter = 0 
+    player.attackCounter = 0
+
+    return player
 }
 
 function initAnim(sprite, sheet) {
+    sprite.anim = {}
+
     Object.keys(sheet.animations).forEach(k => {
         sprite.anim[k] = new AnimatedSprite(sheet.animations[k]);
         sprite.anim[k].animationSpeed = .2;
@@ -30,7 +45,7 @@ function initAnim(sprite, sheet) {
     })
 }
 
-function playAnim(sprite, animName, toZero) {
+export function playAnim(sprite, animName, toZero) {
     if (sprite.activeAnim) {
         sprite.activeAnim.alpha = 0;
         sprite.activeAnim.stop();
