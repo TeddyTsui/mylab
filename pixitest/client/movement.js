@@ -1,5 +1,4 @@
-let preStatus, 
-    nextStatus = {},
+let nextStatus = {},
     keys
 
 // preFrame = { //each logic frame & each player
@@ -43,102 +42,100 @@ let preStatus,
 export function doSimpleLogic(preLogicFrame, operations) {
     let nextLogicFrame = {}
     Object.keys(preLogicFrame).forEach(id => {
-        movement(preLogicFrame[id], operations[id])
+        nextLogicFrame[id] = movement(preLogicFrame[id], operations[id])
     })
     return nextLogicFrame
 }
 
 function movement(player, operation){
-    preStatus = player
+    nextStatus = player
     keys = operation
     calculateSpeed()
     calculateAnimation()
-    nextLogicFrame[player.id] = nextStatus
+    return nextStatus
 }
 
 function calculateSpeed() {
-    let acc = 1;
-    if (keys.up) nextStatus.ay = preStatus.ay - 1;
-    if (keys.down) nextStatus.ay = preStatus.ay + 1;
-    if (keys.left) nextStatus.ax = preStatus.ax - 1;
-    if (keys.right) nextStatus.ax = preStatus.ax + 1;
+    let acc = 2;
+    nextStatus.ax = 0;
+    nextStatus.ay = 0;
+    if (keys.up) nextStatus.ay -= 4;
+    if (keys.down) nextStatus.ay += 4;
+    if (keys.left) nextStatus.ax -= 4;
+    if (keys.right) nextStatus.ax += 4;
     let v = normalize([nextStatus.ax, nextStatus.ay]);
-    nextStatus.vx = preStatus.vx + v[0] * acc;
-    nextStatus.vy = preStatus.vy + v[1] * acc;
-    if (keys.dash && preStatus.dashCounter == 0) {
-        nextStatus.dashCounter = preStatus.dashCoolDown;
+    nextStatus.vx += v[0] * acc;
+    nextStatus.vy += v[1] * acc;
+    if (keys.dash && nextStatus.dashCounter == 0) {
+        nextStatus.dashCounter = nextStatus.dashCoolDown;
         nextStatus.vx *= 6;
         nextStatus.vy *= 6;
     }
-    nextStatus.vx *= preStatus.speedDown;
-    nextStatus.vy *= preStatus.speedDown;
+    nextStatus.vx *= nextStatus.speedDown;
+    nextStatus.vy *= nextStatus.speedDown;
 
-    nextStatus.x = preStatus.x + nextStatus.vx
-    nextStatus.y = preStatus.y + nextStatus.vy
+    nextStatus.x += nextStatus.vx
+    nextStatus.y += nextStatus.vy
 }
 
 function calculateAnimation() {
-    if (preStatus.attackCounter > 0) nextStatus.attackCounter--;
-    if (preStatus.dashCounter > 0) nextStatus.dashCounter--;
-    if (preStatus.actionCounter > 0) {
+    if (nextStatus.attackCounter > 0) nextStatus.attackCounter--;
+    if (nextStatus.dashCounter > 0) nextStatus.dashCounter--;
+    if (nextStatus.actionCounter > 0) {
         nextStatus.actionCounter--;
         nextStatus.vx *= 0.6;
         nextStatus.vy *= 0.6;
         return;
     }
-    if (!preStatus.jumping) { // not jumping
-        
-        nextStatus.jumping = preStatus.jumping
-        nextStatus.z = 0
 
-        if (Math.abs(nextStatus.vx) < 0.1 && Math.abs(nextStatus.vy) < 0.1) nextStatus.action = 'idle'
-        else{
-            if (nextStatus.vx > 0) {
-                nextStatus.action = 'run'
-                nextStatus.lastX = 'right';
-            } else if (nextStatus.vx < 0) {
-                nextStatus.action = 'run'
-                nextStatus.lastX = 'left'
-            } else {
-                nextStatus.action = 'run'
-            }
-            if (nextStatus.vy > 0) nextStatus.lastY = 'down';
-            else if (nextStatus.vy < 0) nextStatus.lastY = 'up';
+    if(nextStatus.vx > 0){
+        nextStatus.lastX = 'right'
+    }else if(nextStatus.vx < 0){
+        nextStatus.lastX = 'left'
+    }
+
+    if(nextStatus.vy > 0){
+        nextStatus.lastY = 'down'
+    }else if(nextStatus.vy < 0){
+        nextStatus.lastY = 'up'
+    }
+
+    if (!nextStatus.jumping) { // not jumping
+
+        if (Math.abs(nextStatus.vx) < 0.1 && Math.abs(nextStatus.vy) < 0.1) nextStatus.motion = 'idle'
+        else nextStatus.motion = 'run'
+
+        if (keys.attack && nextStatus.attackCounter == 0) {
+            nextStatus.actionCounter = nextStatus.actionCoolDown
+            nextStatus.attackCounter = nextStatus.attackCoolDown
+            nextStatus.motion = 'attack' + '_' + nextStatus.lastY
+            nextStatus.fromZero = true
         }
-        if (keys.attack) {
-            if (preStatus.attackCounter > 0) return;
-            nextStatus.actionCounter = preStatus.actionCoolDown;
-            nextStatus.attackCounter = preStatus.attackCoolDown;
-            nextStatus.action = 'attack';
-        }
+
         if (keys.jump) {
             nextStatus.jumping = true;
-            nextStatus.z = -5;
+            nextStatus.vz = -5;
+            nextStatus.z = 0
         }
     } else { // jumping
-        if (nextStatus.vx > 0) nextStatus.lastX = 'right';
-        else if (nextStatus.vx < 0) nextStatus.lastX = 'left';
 
-        if (keys.attack) {
-            if (preStatus.attackCounter <= 0) {
-                nextStatus.actionCounter = preStatus.actionCoolDown;
-                nextStatus.attackCounter = preStatus.attackCoolDown;
-                nextStatus.action = 'jump_attack'
-            }
-        }else nextStatus.action = 'jump'
+        if (keys.attack && nextStatus.attackCounter <= 0) {
+            nextStatus.actionCounter = nextStatus.actionCoolDown
+            nextStatus.attackCounter = nextStatus.attackCoolDown
+            nextStatus.motion = 'jump_attack'
+            nextStatus.fromZero = true
+        }else nextStatus.motion = 'jump';
 
         // jump down
-        nextStatus.z += nextStatus.az
+        nextStatus.vz += nextStatus.az
+        nextStatus.z += nextStatus.vz
         if (nextStatus.z > 0) {
             nextStatus.z = 0;
             nextStatus.jumping = false;
         }
     }
-}
 
-function calculatePosition() {
-    calculateSpeed()
-    calculateAnimation()
+    nextStatus.motion = nextStatus.lastX + '_' + nextStatus.motion
 }
 
 function normalize(arr) {

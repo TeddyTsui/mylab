@@ -2,6 +2,7 @@ import { keyboard } from './utils.js'
 import { createSprite, playAnim } from './charactor.js'
 import { doSimpleLogic } from './movement.js'
 
+
 const response = true //simulation
 const dataTemplate = {
     players: []
@@ -53,7 +54,7 @@ let gameFrame,
     updateCache = [],
     logicFrameCahce = []
 
-export function initClient(element) {
+export function initClient(element, io, url) {
 
     let width = element.offsetWidth,
         height = element.offsetHeight
@@ -64,12 +65,31 @@ export function initClient(element) {
     // TODO add container { playground, UIlayer}
     // TODO initUI()
 
-    if (response) {// simulate network
-        gameFrame = 0
+    let socket = io(url)
+    // if (response) {// simulate network
+    //     gameFrame = 0
 
+    //     loader.add('adventurer', 'sheet/adventurer/adventurer.json')
+    //         .load(setup)
+    // }
+
+    socket.on('init_client', ({currentFrameIndex, fpsRadio, players}) => {
+        players = players
+        fpsRadio = fpsRadio
+        gameFrame = currentFrameIndex
+        // cache frame
+        // how to init nextGameFrame
         loader.add('adventurer', 'sheet/adventurer/adventurer.json')
             .load(setup)
-    }
+    })
+
+    socket.on('create_player', ({id, name, charactor, status}) => {
+        initPlayer({id, name, charactor, status})
+    })
+
+    socket.on('update_frame', (keys) => {
+        updateCache.push(keys)
+    })
 
     function setup() {
         // set up charactor ability
@@ -79,15 +99,19 @@ export function initClient(element) {
             dashCoolDown: 20
         }
 
-        if (dataTemplate.players.length > 0) {
-            dataTemplate.players.forEach(player => {
+        if (players.length > 0) {
+            players.forEach(player => {
                 initPlayer({ player })
             })
         }
 
+        state = play
+        app.ticker.add(delta => gameLoop(delta))
+
         // for test
         createPlayer('TEST', 'adventurer')
-        let network = setInterval(communicate, 1000 / 60 * fpsRadio)
+        // let network = setInterval(communicate, 1000 / 60 * fpsRadio)
+        nextGameFrame = 0
 
         logicFrameCahce.push(
             {
@@ -108,14 +132,14 @@ export function initClient(element) {
                     // action
                     lastX: 'right',
                     lastY: 'down',
-                    motion: 'idle',
+                    motion: 'right_idle',
                     jumping: false,
                     actionCounter: 0,
                     attackCounter: 0,
                     dashCounter: 0,
 
                     // ability
-                    speedDown: 2,
+                    speedDown: .4,
                     actionCoolDown: 10,
                     attackCoolDown: 20,
                     dashCoolDown: 10,
@@ -149,6 +173,9 @@ function play(delta) {
     //
     if (gameFrame > nextGameFrame) {
         nextGameFrame += fpsRadio * (index + 1)
+        if(nextGameFrame > maxFrameCache){
+            nextGameFrame -= maxFrameCache
+        }
 
         if (updateCache.length > 0) {
             // do some Logic
@@ -164,7 +191,7 @@ function play(delta) {
             if (index >= logicFrameCahce.length) {
                 counter = fpsRadio
                 index = logicFrameCahce.length
-                updateGameFrame(logicFrameCahce[index], offset)
+                updateGameFrame(logicFrameCahce[logicFrameCahce.length-1], offset)
                 return
             } else {
                 counter = offset
@@ -187,10 +214,14 @@ function play(delta) {
 function updateGameFrame(logicFrame, offset) {
     Object.keys(players).forEach(id => {
         let { x, y, z } = logicFrame[id]
+
         players[id].x += (x - players[id].x) / fpsRadio * offset
         players[id].y += (y - players[id].y) / fpsRadio * offset
-        players[id].entity.y += (z - players[id].entity.y) / fpsRadio * offset
-        playAnim(players[id].entity, logicFrame[id].lastX + '_' + logicFrame[id].motion, false)
+        let entity = players[id].getChildByName('entity')
+        entity.y += (z - entity.y) / fpsRadio * offset
+
+        playAnim(entity, logicFrame[id].motion, logicFrame[id].fromZero)
+        logicFrame[id].fromZero = false
     })
 }
 
@@ -200,19 +231,24 @@ function createPlayer(name, charactor, conf = controllConfig) {
     if (name == '') {
         return
     }
-    if (response) {// simulate network
-        // TODO handle response data
 
-        playerTemplate.name = name
-        console.log(charactor)
-
-        initPlayer(playerTemplate)
-
+    socket.emit('create_player', {name, charactor})
+    socket.on('create_success', () => {
         bindKey(conf)
+    })
+    // if (response) {// simulate network
+    //     // TODO handle response data
 
-        state = play
-        app.ticker.add(delta => gameLoop(delta))
-    }
+    //     playerTemplate.name = name
+    //     console.log(charactor)
+
+    //     initPlayer(playerTemplate)
+
+    //     bindKey(conf)
+
+    //     state = play
+    //     app.ticker.add(delta => gameLoop(delta))
+    // }
 }
 
 // init a charactor
@@ -233,7 +269,7 @@ function bindKey(conf) {
     Object.keys(conf).forEach(k => {
         let key = keyboard(conf[k])
         if (k == 'jump') {
-            key.press = () => { keys[k] = true; console.log(players['Nijia_001'].entity.y) }
+            key.press = () => { keys[k] = true; console.log(keys) }
         } else {
             key.press = () => keys[k] = true
         }

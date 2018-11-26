@@ -9,10 +9,14 @@
 <body>
     <div id="playground"></div>
     <script src="pixi.min.js"></script>
+    <script src="./client/socket.io.js"></script>
     <script type="module">
         import { initClient as client } from './client/client.js'
 
-        client(document.getElementById('playground'))
+        // let socket = io('http://localhost:3000')
+        let socket = null
+
+        client(document.getElementById('playground'), socket)
     </script>
     <style>
         #playground{

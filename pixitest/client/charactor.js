@@ -15,13 +15,13 @@ export function createSprite(name, charactor, status) {
     selfCircle.lineStyle(2, 0x00FF00, 1)
     selfCircle.drawCircle(player.x + 16, player.y + 60, 10)
     selfCircle.scale.y = 0.5
-
+    
+    entity.name = 'entity'
+    selfCircle.name = 'status'
+    
     player.addChild(selfCircle)
     player.addChild(entity)
     initAnim(entity, charactorSheet)
-
-    player.entity = entity
-    player.status = selfCircle
 
     return player
 }
