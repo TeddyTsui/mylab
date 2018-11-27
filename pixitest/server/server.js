@@ -2,6 +2,8 @@ var app = require('express')()
 var http = require('http').Server(app)
 var io = require('socket.io')(http)
 
+var doSimpleLogic = require('./movement.js')
+
 const players = [],
     operation = {
         up: false,
@@ -13,21 +15,63 @@ const players = [],
         dash: false
     },
     fpsRadio = 2,
-    maxFrameIndex = 60/ 2* 60* 60
+    maxFrameIndex = 60/ 2* 60* 60,
+    initFrame = { //each logic frame & each player
+        'player_id':{
+            // position
+            x: 0,
+            y: 0,
+            z: 0,
+    
+            // speed
+            vx: 0,
+            vy: 0,
+            vz: 0,
+            ax: 0,
+            ay: 0,
+            az: .6,
+    
+            // action
+            lastX: 'right',
+            lastY: 'down',
+            motion: 'idel',
+            jumping: false,
+            actionCounter: 0,
+            attackCounter: 0,
+            dashCounter: 0,
+    
+            // ability
+            speedDown: 2,
+            actionCoolDown: 10,
+            attackCoolDown: 20,
+            dashCoolDown: 10,
+    
+            //status
+            HP: 100,
+            maxHP: 100,
+            MP: 60,
+            maxMP: 60
+        }
+    }
 
-let nextLogicFrame = {},
+let nextLogicFrameControl = {},
+    nextLogicFrame = {},
     currentFrameIndex
 
 io.on('connection', client => {
-    client.emit('inti_client', {currentFrameIndex, fpsRadio, players})
+    client.emit('init_client', {currentFrameIndex, fpsRadio, nextLogicFrame, players})
 
-    client.on('create_player', (id, name, charactor) =>{
+    client.on('create_player', ({name, charactor}) =>{
+        let id = generateID(name, charactor)
         players[id] = {name, charactor}
+        nextLogicFrame[id] = initFrame
+        client.emit('create_success', id)
         io.emit('create_player', {id, name, charactor})
+        console.log(players.length)
     })
 
     client.on('control_evnent', (id, keys) => {
-        nextLogicFrame[id] = keys
+        nextLogicFrameControl[id] = keys
     })
 
     client.on('disconnect', () => {
@@ -40,12 +84,19 @@ http.listen(3000, () => {
     console.log('listening on *:3000')
     currentFrameIndex = 0
     let ticker = setInterval(() => {
-        Object.keys(player).forEach(id => {
-            if(nextLogicFrame[id] == undefined){
-                nextLogicFrame[id] = operation
+        currentFrameIndex ++
+        Object.keys(players).forEach(id => {
+            if(nextLogicFrameControl[id] == undefined){
+                nextLogicFrameControl[id] = {}
             }
         })
-        io.emit('updateFrame', nextLogicFrame)
-        nextLogicFrame = {}
+        io.emit('update_frame', currentFrameIndex, nextLogicFrameControl)
+        nextLogicFrame =
+                doSimpleLogic(nextLogicFrame, nextLogicFrameControl)
+        nextLogicFrameControl = {}
     }, 1000 / 60 * fpsRadio)
 })
+
+function generateID(name, charactor) {
+    return name + '_' + new Date().getMilliseconds() + '_' + charactor
+}
