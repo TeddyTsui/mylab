@@ -47,7 +47,7 @@ export function doSimpleLogic(preLogicFrame, operations) {
     return nextLogicFrame
 }
 
-function movement(player, operation){
+function movement(player, operation = {}){
     nextStatus = player
     keys = operation
     calculateSpeed()

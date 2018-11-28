@@ -70,7 +70,8 @@ io.on('connection', client => {
         console.log(players.length)
     })
 
-    client.on('control_evnent', (id, keys) => {
+    client.on('control_event', (id, keys) => {
+        console.log(id+ '  ' +keys.up)
         nextLogicFrameControl[id] = keys
     })
 

@@ -123,7 +123,7 @@ export function initClient(element, io, url) {
         players = playerList
         fpsRadio = fpsRadio
         gameFrame = currentFrameIndex * fpsRadio
-        nextGameFrame = gameFrame
+        nextGameFrame = gameFrame + fpsRadio
         logicFrameIndexArr.push(currentFrameIndex)
         logicFrameCahce[currentFrameIndex] = initLogicFrame
         // cache frame
@@ -231,23 +231,24 @@ function play(delta) {
     }
     // let index = Math.floor(delta / fpsRadio)
     let offset = delta % fpsRadio
-
-    let curFrameIndex = nextGameFrame / fpsRadio,
-        nextFrameIndex = curFrameIndex + 1
+    // console.log(gameFrame)
+    // console.log(Math.floor(gameFrame / fpsRadio))
+    console.log(updateCache)
+    let curFrameIndex = Math.floor(gameFrame / fpsRadio),
+        prevFrameIndex = curFrameIndex - 1
 
     // gameFrame count greater than nextGameFrame then do logic
     if (gameFrame > nextGameFrame) {
-        console.log(updateCache)
-        console.log(curFrameIndex)
-        if (updateCache[nextFrameIndex] !== undefined) {
-
+        if (updateCache[curFrameIndex] !== undefined) {
             nextGameFrame += fpsRadio
             if (nextGameFrame > maxFrameCache) {
                 nextGameFrame -= maxFrameCache
             }
+            // console.log(logicFrameCahce)
+            // console.log(curFrameIndex)
             // do some Logic
-            logicFrameCahce[nextFrameIndex] =
-                doSimpleLogic(logicFrameCahce[curFrameIndex], updateCache[nextFrameIndex])
+            logicFrameCahce[curFrameIndex] =
+                doSimpleLogic(logicFrameCahce[prevFrameIndex], updateCache[curFrameIndex])
 
             logicFrameIndexArr.push(curFrameIndex)
         } else {
@@ -257,6 +258,8 @@ function play(delta) {
 
     // update game frame
     if (logicFrameIndexArr.length > 0) {
+        // console.log(logicFrameCahce)
+        // console.log(curFrameIndex)
         logicFrameIndexArr.find((frameIndex, i, self) => {
             if (frameIndex == curFrameIndex) {
                 updateDispalyFrame(logicFrameCahce[frameIndex], offset)
@@ -318,7 +321,7 @@ function createPlayer(name, charactor, conf = controllConfig) {
         //let initFrameIndex = logicFrameIndexArr[-1]
         // logicFrameCahce[initFrameIndex][playerId] = initStatus
         localPlayerId = playerId
-        logicFrameCahce[nextGameFrame/fpsRadio][playerId] = initStatus
+        logicFrameCahce[gameFrame/fpsRadio][playerId] = initStatus
         bindKey(conf)
     })
     // if (response) {// simulate network
