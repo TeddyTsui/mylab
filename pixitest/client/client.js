@@ -233,7 +233,6 @@ function play(delta) {
     let offset = delta % fpsRadio
     // console.log(gameFrame)
     // console.log(Math.floor(gameFrame / fpsRadio))
-    console.log(updateCache)
     let curFrameIndex = Math.floor(gameFrame / fpsRadio),
         prevFrameIndex = curFrameIndex - 1
 
@@ -244,11 +243,11 @@ function play(delta) {
             if (nextGameFrame > maxFrameCache) {
                 nextGameFrame -= maxFrameCache
             }
-            // console.log(logicFrameCahce)
-            // console.log(curFrameIndex)
+            console.log(logicFrameCahce[prevFrameIndex])
             // do some Logic
             logicFrameCahce[curFrameIndex] =
                 doSimpleLogic(logicFrameCahce[prevFrameIndex], updateCache[curFrameIndex])
+            // console.log(logicFrameCahce[curFrameIndex])
 
             logicFrameIndexArr.push(curFrameIndex)
         } else {
@@ -324,19 +323,6 @@ function createPlayer(name, charactor, conf = controllConfig) {
         logicFrameCahce[gameFrame/fpsRadio][playerId] = initStatus
         bindKey(conf)
     })
-    // if (response) {// simulate network
-    //     // TODO handle response data
-
-    //     playerTemplate.name = name
-    //     console.log(charactor)
-
-    //     initPlayer(playerTemplate)
-
-    //     bindKey(conf)
-
-    //     state = play
-    //     app.ticker.add(delta => gameLoop(delta))
-    // }
 }
 
 // init a charactor
@@ -357,7 +343,7 @@ function bindKey(conf) {
     Object.keys(conf).forEach(k => {
         let key = keyboard(conf[k])
         if (k == 'jump') {
-            key.press = () => { keys[k] = true; console.log(keys) }
+            key.press = () => keys[k] = true
         } else {
             key.press = () => keys[k] = true
         }
@@ -371,10 +357,4 @@ function updateControl() {
     // send control to server
     socket.emit('control_event', localPlayerId, keys)
     // console.log(localPlayerId + ' : ' +keys)
-}
-
-function communicate() {
-    if (response) {
-        updateCache.push({ 'Nijia_001': keys })
-    }
 }

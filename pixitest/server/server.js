@@ -71,7 +71,7 @@ io.on('connection', client => {
     })
 
     client.on('control_event', (id, keys) => {
-        console.log(id+ '  ' +keys.up)
+        // console.log(id+ '  ' +keys.up)
         nextLogicFrameControl[id] = keys
     })
 
