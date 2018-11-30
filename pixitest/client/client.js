@@ -2,22 +2,6 @@ import { keyboard } from './utils.js'
 import { createSprite, playAnim } from './charactor.js'
 import { doSimpleLogic } from './movement.js'
 
-const defaultDelay = 10
-
-const response = true //simulation
-const dataTemplate = {
-    players: []
-}
-
-const playerTemplate = {
-    id: 'Nijia_001',
-    name: 'Nijia_001',
-    charactor: 'adventurer',
-    status: {
-        HP: '100/100'
-    }
-}
-
 const initStatus = {
     // position
     x: 0,
@@ -92,12 +76,11 @@ let gameFrame,
     fpsRadio = 2,
     localPlayerId,
     updateControlInterval
-    // updateCache = [],
-    // logicFrameCahce = [],
 
 const updateCache = {},
     logicFrameCahce = {},
-    logicFrameIndexArr = []
+    logicFrameIndexArr = [],
+    defaultDelay = 10
 
 
 export function initClient(element, io, url) {
@@ -112,12 +95,6 @@ export function initClient(element, io, url) {
     // TODO initUI()
 
     socket = io(url)
-    // if (response) {// simulate network
-    //     gameFrame = 0
-
-    //     loader.add('adventurer', 'sheet/adventurer/adventurer.json')
-    //         .load(setup)
-    // }
 
     socket.on('init_client', ({ currentFrameIndex, fpsRadio, nextLogicFrame: initLogicFrame, players: playerList }) => {
         players = playerList
@@ -130,15 +107,11 @@ export function initClient(element, io, url) {
         // how to init nextGameFrame
         loader.add('adventurer', 'sheet/adventurer/adventurer.json')
             .load(setup)
-
-        Object.keys(players).forEach(id => {
-            initPlayer(players[id])
-        })
     })
 
     socket.on('create_player', ({ id, name, charactor, status }) => {
         console.log(id + ' : ' + name)
-        initPlayer({ id, name, charactor, status })
+        initPlayer(id, {name, charactor, status })
     })
 
     socket.on('update_frame', (logicFrameIndex,keys) => {
@@ -153,61 +126,14 @@ export function initClient(element, io, url) {
             dashCoolDown: 20
         }
 
-        if (players.length > 0) {
-            players.forEach(player => {
-                initPlayer({ player })
-            })
-        }
+        Object.keys(players).forEach(id => {
+            initPlayer(id, players[id])
+        })
 
         state = cacheFrame
         app.ticker.add(delta => gameLoop(delta))
 
-        // for test
-        // if(window.localStorage.getItem('AdventurerPlayer') !== null){
-        //     localPlayerId = window.localStorage.getItem('AdventurerPlayer')
-        // }else{
-        //     createPlayer('TEST', 'adventurer')
-        // }
         createPlayer('TEST', 'adventurer')
-
-        // logicFrameCahce.push(
-        //     {
-        //         'Nijia_001': {
-        //             // position
-        //             x: 0,
-        //             y: 0,
-        //             z: 0,
-
-        //             // speed
-        //             vx: 0,
-        //             vy: 0,
-        //             vz: 0,
-        //             ax: 0,
-        //             ay: 0,
-        //             az: .6,
-
-        //             // action
-        //             lastX: 'right',
-        //             lastY: 'down',
-        //             motion: 'right_idle',
-        //             jumping: false,
-        //             actionCounter: 0,
-        //             attackCounter: 0,
-        //             dashCounter: 0,
-
-        //             // ability
-        //             speedDown: .4,
-        //             actionCoolDown: 10,
-        //             attackCoolDown: 20,
-        //             dashCoolDown: 10,
-
-        //             //status
-        //             HP: 100,
-        //             maxHP: 100,
-        //             MP: 60,
-        //             maxMP: 60
-        //         }
-        //     })
     }
 }
 
@@ -233,7 +159,7 @@ function play(delta) {
     let offset = delta % fpsRadio
     // console.log(gameFrame)
     // console.log(Math.floor(gameFrame / fpsRadio))
-    let curFrameIndex = Math.floor(gameFrame / fpsRadio),
+    let curFrameIndex = nextGameFrame/fpsRadio,
         prevFrameIndex = curFrameIndex - 1
 
     // gameFrame count greater than nextGameFrame then do logic
@@ -243,7 +169,8 @@ function play(delta) {
             if (nextGameFrame > maxFrameCache) {
                 nextGameFrame -= maxFrameCache
             }
-            console.log(logicFrameCahce[prevFrameIndex])
+            console.log(logicFrameCahce)
+            console.log(prevFrameIndex + ' : ' +logicFrameCahce[prevFrameIndex])
             // do some Logic
             logicFrameCahce[curFrameIndex] =
                 doSimpleLogic(logicFrameCahce[prevFrameIndex], updateCache[curFrameIndex])
@@ -270,31 +197,12 @@ function play(delta) {
                 return true
             }
         })
-        // if (index >= 0 && index >= logicFrameCahce.length) {
-        //     if (index >= logicFrameCahce.length) {
-        //         counter = fpsRadio
-        //         index = logicFrameCahce.length
-        //         updateDispalyFrame(logicFrameCahce[logicFrameCahce.length-1], offset)
-        //         return
-        //     } else {
-        //         counter = offset
-        //     }
-        // } else {
-        //     counter += offset
-        // }
-
-        // updateDispalyFrame(logicFrameCahce[index], offset)
-
-        // if (counter == fpsRadio) {
-        //     logicFrameCahce.splice(0, index + 1)
-        // } else if (index) {
-        //     logicFrameCahce.splice(0, index)
-        // }
     }
 }
 
 // calculate interpolation rendering
 function updateDispalyFrame(logicFrame, offset) {
+    console.log(logicFrame)
     Object.keys(players).forEach(id => {
         let { x, y, z } = logicFrame[id]
 
@@ -326,7 +234,7 @@ function createPlayer(name, charactor, conf = controllConfig) {
 }
 
 // init a charactor
-function initPlayer({ id, name, charactor, status }) {
+function initPlayer(id, {name, charactor, status }) {
     window.localStorage.setItem('AdventurerPlayer', id)
     players[id] = createSprite(name, charactor, status)
     app.stage.addChild(players[id])
