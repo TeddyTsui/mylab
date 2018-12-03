@@ -4,6 +4,7 @@ var io = require('socket.io')(http)
 
 var doSimpleLogic = require('./movement.js')
 
+
 const players = {},
     operation = {
         up: false,
@@ -40,7 +41,7 @@ const players = {},
         dashCounter: 0,
 
         // ability
-        speedDown: 2,
+        speedDown: .4,
         actionCoolDown: 10,
         attackCoolDown: 20,
         dashCoolDown: 10,
@@ -54,17 +55,20 @@ const players = {},
 
 let nextLogicFrameControl = {},
     nextLogicFrame = {},
+    currentLogicFrame = {},
     currentFrameIndex
 
 io.on('connection', client => {
     client.emit('init_client', {currentFrameIndex, fpsRadio, nextLogicFrame, players})
 
-    client.on('create_player', ({name, charactor}) =>{
+    client.on('create_current_player', ({name, charactor}) =>{
         let id = generateID(name, charactor)
         players[id] = {name, charactor}
         nextLogicFrame[id] = initFrame
-        client.emit('create_success', id)
-        io.emit('create_player', {id, name, charactor})
+        client.emit('is_creating', id)
+        client.on('get_ready', () => {
+            io.emit('create_player', id, name, charactor, nextLogicFrame[id])
+        })
     })
 
     client.on('control_event', (id, keys) => {
@@ -89,8 +93,18 @@ http.listen(3000, () => {
             }
         })
         io.emit('update_frame', currentFrameIndex, nextLogicFrameControl)
+
+        currentLogicFrame = nextLogicFrame
+        // Object.keys(currentLogicFrame).forEach((id) => {
+        //     console.log(id + ' : ' + currentLogicFrame[id].x)
+        // })
+
         nextLogicFrame =
-                doSimpleLogic(nextLogicFrame, nextLogicFrameControl)
+                doSimpleLogic(currentLogicFrame, nextLogicFrameControl)
+
+        // Object.keys(nextLogicFrame).forEach((id) => {
+        //     console.log(id + ' : ' + nextLogicFrame[id].x+ ' : ' +nextLogicFrameControl[id].right)
+        // })
         nextLogicFrameControl = {}
     }, 1000 / 60 * fpsRadio)
 })

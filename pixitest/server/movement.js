@@ -1,53 +1,19 @@
 let nextStatus = {},
     keys
 
-// preFrame = { //each logic frame & each player
-//     'player_id':{
-//         // position
-//         x: 0,
-//         y: 0,
-//         z: 0,
-
-//         // speed
-//         vx: 0,
-//         vy: 0,
-//         vz: 0,
-//         ax: 0,
-//         ay: 0,
-//         az: .6,
-
-//         // action
-//         lastX: 'right',
-//         lastY: 'down',
-//         motion: 'idel',
-//         jumping: false,
-//         actionCounter: 0,
-//         attackCounter: 0,
-//         dashCounter: 0,
-
-//         // ability
-//         speedDown: 2,
-//         actionCoolDown: 10,
-//         attackCoolDown: 20,
-//         dashCoolDown: 10,
-
-//         //status
-//         HP: 100,
-//         maxHP: 100,
-//         MP: 60,
-//         maxMP: 60
-//     }
+// module.exports = function doSimpleLogic(preLogicFrame, operations) {
+//     let nextLogicFrame = {}
+//     Object.keys(preLogicFrame).forEach(id => {
+//         nextLogicFrame[id] = movement(preLogicFrame[id], operations[id])
+//     })
+//     return nextLogicFrame
 // }
 
-function doSimpleLogic(preLogicFrame, operations) {
-    let nextLogicFrame = {}
-    Object.keys(preLogicFrame).forEach(id => {
-        nextLogicFrame[id] = movement(preLogicFrame[id], operations[id])
-    })
-    return nextLogicFrame
+module.exports = function doSimpleLogic(preLogicFrame, operations) {
+    
 }
 
-function movement(player, operation){
+function movement(player, operation = {}){
     nextStatus = player
     keys = operation
     calculateSpeed()
@@ -148,5 +114,3 @@ function normalize(arr) {
         arr2[i] = arr[i] / down;
     return arr2;
 }
-
-module.exports = doSimpleLogic
