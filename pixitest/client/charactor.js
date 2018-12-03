@@ -3,7 +3,7 @@ let Container = PIXI.Container,
     Graphics = PIXI.Graphics,
     AnimatedSprite = PIXI.extras.AnimatedSprite
 
-export function createSprite(name, charactor, status) {
+export function createSprite(name, charactor, status, isCurrentPlayer) {
     let charactorSheet = resources[charactor].spritesheet
     let player = new Container(),
         entity = new Container()
@@ -12,7 +12,11 @@ export function createSprite(name, charactor, status) {
     player.abilities = resources[charactor].baseAbilities
 
     let selfCircle = new Graphics()
-    selfCircle.lineStyle(2, 0x00FF00, 1)
+    if(isCurrentPlayer){
+        selfCircle.lineStyle(2, 0xcccc00, 1)
+    }else{
+        selfCircle.lineStyle(2, 0x00FF00, 1)
+    }
     selfCircle.drawCircle(player.x + 16, player.y + 60, 10)
     selfCircle.scale.y = 0.5
     

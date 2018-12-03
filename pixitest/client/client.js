@@ -2,43 +2,6 @@ import { keyboard } from './utils.js'
 import { createSprite, playAnim } from './charactor.js'
 import { doSimpleLogic } from './movement.js'
 
-const initStatus = {
-    // position
-    x: 0,
-    y: 0,
-    z: 0,
-
-    // speed
-    vx: 0,
-    vy: 0,
-    vz: 0,
-    ax: 0,
-    ay: 0,
-    az: .6,
-
-    // action
-    lastX: 'right',
-    lastY: 'down',
-    motion: 'right_idle',
-    jumping: false,
-    actionCounter: 0,
-    attackCounter: 0,
-    dashCounter: 0,
-
-    // ability
-    speedDown: .4,
-    actionCoolDown: 10,
-    attackCoolDown: 20,
-    dashCoolDown: 10,
-
-    //status
-    HP: 100,
-    maxHP: 100,
-    MP: 60,
-    maxMP: 60
-}
-
-
 const controllConfig = {
     /**
      *  default
@@ -95,6 +58,7 @@ export function initClient(element, io, url) {
     // TODO initUI()
 
     socket = io(url)
+    bindKey(controllConfig)
 
     socket.on('init_client', ({ currentFrameIndex, fpsRadio, nextLogicFrame: initLogicFrame, players: playerList }) => {
         players = playerList
@@ -103,19 +67,18 @@ export function initClient(element, io, url) {
         nextGameFrame = gameFrame + fpsRadio
         logicFrameIndexArr.push(currentFrameIndex)
         logicFrameCahce[currentFrameIndex] = initLogicFrame
+        console.log(initLogicFrame)
         // cache frame
         // how to init nextGameFrame
         loader.add('adventurer', 'sheet/adventurer/adventurer.json')
             .load(setup)
     })
 
-    socket.on('create_player', ({ id, name, charactor, status }) => {
-        console.log(id + ' : ' + name)
-        initPlayer(id, {name, charactor, status })
-    })
+    socket.on('create_player', initPlayer)
 
-    socket.on('update_frame', (logicFrameIndex,keys) => {
-        updateCache[logicFrameIndex] = keys
+    socket.on('update_frame', (logicFrameIndex,controls) => {
+        updateCache[logicFrameIndex] = controls
+        // console.log(keys)
     })
 
     function setup() {
@@ -127,13 +90,19 @@ export function initClient(element, io, url) {
         }
 
         Object.keys(players).forEach(id => {
-            initPlayer(id, players[id])
+            initPlayer(id, players[id].name, players[id].charactor)
         })
 
+        // cache frame
         state = cacheFrame
+        
         app.ticker.add(delta => gameLoop(delta))
 
-        createPlayer('TEST', 'adventurer')
+        //for test
+        let currentPlayerId = window.localStorage.getItem('AdventurerPlayer')
+        if(currentPlayerId == null || players[currentPlayerId] == undefined){
+            createCurrentPlayer('TEST', 'adventurer')
+        }
     }
 }
 
@@ -162,6 +131,8 @@ function play(delta) {
     let curFrameIndex = nextGameFrame/fpsRadio,
         prevFrameIndex = curFrameIndex - 1
 
+    // console.log(updateCache)
+
     // gameFrame count greater than nextGameFrame then do logic
     if (gameFrame > nextGameFrame) {
         if (updateCache[curFrameIndex] !== undefined) {
@@ -169,8 +140,8 @@ function play(delta) {
             if (nextGameFrame > maxFrameCache) {
                 nextGameFrame -= maxFrameCache
             }
-            console.log(logicFrameCahce)
-            console.log(prevFrameIndex + ' : ' +logicFrameCahce[prevFrameIndex])
+            // console.log(logicFrameCahce)
+            // console.log(prevFrameIndex + ' : ' +logicFrameCahce[prevFrameIndex])
             // do some Logic
             logicFrameCahce[curFrameIndex] =
                 doSimpleLogic(logicFrameCahce[prevFrameIndex], updateCache[curFrameIndex])
@@ -202,59 +173,62 @@ function play(delta) {
 
 // calculate interpolation rendering
 function updateDispalyFrame(logicFrame, offset) {
-    console.log(logicFrame)
+    // console.log(logicFrame)
     Object.keys(players).forEach(id => {
-        let { x, y, z } = logicFrame[id]
+        if(logicFrame[id] !== undefined){
+            let { x, y, z } = logicFrame[id]
+            players[id].x += (x - players[id].x) / fpsRadio * offset
+            players[id].y += (y - players[id].y) / fpsRadio * offset
+            let entity = players[id].getChildByName('entity')
+            entity.y += (z - entity.y) / fpsRadio * offset
+    
+            playAnim(entity, logicFrame[id].motion, logicFrame[id].fromZero)
+            logicFrame[id].fromZero = false
+        }
 
-        players[id].x += (x - players[id].x) / fpsRadio * offset
-        players[id].y += (y - players[id].y) / fpsRadio * offset
-        let entity = players[id].getChildByName('entity')
-        entity.y += (z - entity.y) / fpsRadio * offset
-
-        playAnim(entity, logicFrame[id].motion, logicFrame[id].fromZero)
-        logicFrame[id].fromZero = false
     })
 }
 
 
 // create a charactor for local player
-function createPlayer(name, charactor, conf = controllConfig) {
+function createCurrentPlayer(name, charactor) {
     if (name == '') {
         return
     }
 
-    socket.emit('create_player', { name, charactor })
-    socket.on('create_success', (playerId) => {
-        //let initFrameIndex = logicFrameIndexArr[-1]
-        // logicFrameCahce[initFrameIndex][playerId] = initStatus
-        localPlayerId = playerId
-        logicFrameCahce[gameFrame/fpsRadio][playerId] = initStatus
-        bindKey(conf)
+    socket.emit('create_current_player', { name, charactor })
+
+    socket.on('is_creating', (id) => {
+        window.localStorage.setItem('AdventurerPlayer', id)
+        socket.emit('get_ready')
     })
 }
 
 // init a charactor
-function initPlayer(id, {name, charactor, status }) {
-    window.localStorage.setItem('AdventurerPlayer', id)
-    players[id] = createSprite(name, charactor, status)
+function initPlayer(id, name, charactor, status, initStatus) {
+    let isCurrentPlayer = false
+    if(id == window.localStorage.getItem('AdventurerPlayer')){
+        localPlayerId = id
+        isCurrentPlayer = true
+    }
+
+    if(initStatus){
+        logicFrameCahce[gameFrame/fpsRadio][id] = initStatus
+    }
+
+    players[id] = createSprite(name, charactor, status, isCurrentPlayer)
     app.stage.addChild(players[id])
 }
 
 // player reconnect
 function reconnectPlayer(id) {
-    if (response) {// simulate network
-        createPlayer(name, charactor, status)
-    }
+    
 }
 
 function bindKey(conf) {
     Object.keys(conf).forEach(k => {
         let key = keyboard(conf[k])
-        if (k == 'jump') {
-            key.press = () => keys[k] = true
-        } else {
-            key.press = () => keys[k] = true
-        }
+        key.press = () => keys[k] = true
         key.release = () => keys[k] = false
     })
 }
@@ -263,6 +237,7 @@ function bindKey(conf) {
 // hanlder network request response 
 function updateControl() {
     // send control to server
-    socket.emit('control_event', localPlayerId, keys)
-    // console.log(localPlayerId + ' : ' +keys)
+    if(localPlayerId != null && localPlayerId != undefined ){
+        socket.emit('control_event', localPlayerId, keys)
+    }
 }
